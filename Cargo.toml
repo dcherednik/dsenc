@@ -1,0 +1,11 @@
+[package]
+name = "dsenc"
+version = "0.1.0"
+authors = ["Daniil Cherednik <dan.cherednik@gmail.com>"]
+license = "BSDv3"
+
+[dependencies]
+getopts = "0.2"
+hound = "2.0.0"
+rustfft = "2.0.0"
+num = "0.1.42"
