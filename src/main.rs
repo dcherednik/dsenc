@@ -3,12 +3,13 @@ use getopts::Options;
 use std::env;
 use std::io::Write;
 use std::io::stdout;
-
 extern crate hound;
+
+
 
 mod dsd;
 use dsd::Dsdenc;
-
+use dsd::filewriter::Writer;
 //struct Settings {
 //    frame_size: usize
 //}
@@ -27,7 +28,7 @@ fn show_progress(pos: usize, duration: usize, cont: bool) {
     } else {
         print!("{} % done\n", percent);
     }
-    stdout().flush();
+    stdout().flush().expect("Unable to flush stdout");
 }
 
 fn do_work(input_file: String, output_file: String) {
@@ -44,12 +45,12 @@ fn do_work(input_file: String, output_file: String) {
     let scale = (1 << (spec.bits_per_sample - 1)) as f64;
     let mut new_spec = spec.clone();
     new_spec.sample_rate = spec.sample_rate * oversample as u32;
-    let mut writer = hound::WavWriter::create(output_file, new_spec).unwrap();
+
+    let mut dsd_writer: dsd::filewriter::WriterCtx = dsd::filewriter::Writer::new(output_file, channels, oversample * duration, oversample * FRAMESZ / 8);
+    dsd_writer.write_header();
 
     let mut possition = 0usize;
 
-//    let mut buffers: Vec<Vec<f64>> =
-//        (0..channels).map(|_| Vec::with_capacity(FRAMESZ as usize)).collect();
     let mut buffers: Vec<Vec<f64>> =
         (0..channels).map(|_| vec![0f64; FRAMESZ]).collect();
 
@@ -57,8 +58,7 @@ fn do_work(input_file: String, output_file: String) {
     let mut encoders: Vec<dsd::DsdencCtx> =
         (0..channels).map(|_| dsd::Dsdenc::new(FRAMESZ, spec.sample_rate as usize, oversample)).collect();
 
-    let mut cont: bool = true;
-    while cont && possition < duration {
+    while possition < duration {
         let mut block_pos = 0u32 as usize;
         while block_pos < FRAMESZ && possition + block_pos < duration {
             let chs = buffers.len();
@@ -70,7 +70,7 @@ fn do_work(input_file: String, output_file: String) {
             block_pos = block_pos + 1;
         }
 
-        let mut out_buffers: Vec<Vec<f64>> = Vec::new();
+        let mut out_buffers: Vec<Vec<i8>> = Vec::new();
         let chs = buffers.len();
         for ch in 0..chs {
             let encoder = &mut encoders[ch];
@@ -81,25 +81,28 @@ fn do_work(input_file: String, output_file: String) {
 
         }
 
+        let chs = buffers.len();
         block_pos = 0usize;
-        while cont && block_pos < FRAMESZ * oversample && possition * oversample + block_pos < duration * oversample {
-            let chs = buffers.len();
-            for ch in 0..chs {
-                let buf = &mut out_buffers[ch];
-                if block_pos < buf.len() as usize {
-                    let sample = (buf[block_pos] * 20000.0).round() as i16;
-                    writer.write_sample(sample).unwrap()
+        for ch in 0..chs {
+            let buf = &mut out_buffers[ch];
+            while block_pos < FRAMESZ * oversample {
+                let sample = buf[block_pos];
+                if sample > 0i8 {
+                    dsd_writer.write_bit(true);
                 } else {
-                    cont = false;
+                    dsd_writer.write_bit(false);
                 }
+                block_pos = block_pos + 1;
             }
-
-            block_pos = block_pos + 1;
+            if ch < chs - 1 {
+                block_pos = 0usize;
+            }
         }
 
         possition = possition + block_pos / oversample;
-        show_progress(possition, duration, cont);
+        show_progress(possition, duration, true);
     }
+    show_progress(possition, duration, false);
 
 }
 
@@ -110,7 +113,7 @@ fn main() {
     let mut opts = Options::new();
     opts.optopt("i", "", "set input file name", "NAME");
     opts.optopt("o", "", "set output file name", "NAME");
-    opts.optopt("f", "", "set frame fize", "");
+//    opts.optopt("f", "", "set frame fize", "");
     opts.optflag("h", "", "print this help menu");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }

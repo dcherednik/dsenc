@@ -3,6 +3,8 @@ extern crate rustfft;
 
 mod fftresample;
 mod modulator;
+pub mod filewriter;
+
 use self::fftresample::Resampler;
 use self::fftresample::ResampleCtx;
 use self::modulator::Modulator;
@@ -15,7 +17,7 @@ pub struct DsdencCtx {
 
 pub trait Dsdenc {
     fn new(sz: usize, input_samplerate: usize, oversample: usize) -> Self;
-    fn encode_frame(&mut self, input: Vec<f64>) -> Vec<f64>;
+    fn encode_frame(&mut self, input: Vec<f64>) -> Vec<i8>;
 }
 
 impl Dsdenc for DsdencCtx {
@@ -27,7 +29,7 @@ impl Dsdenc for DsdencCtx {
         }
     }
 
-    fn encode_frame(&mut self, input: Vec<f64>) -> Vec<f64> {
+    fn encode_frame(&mut self, input: Vec<f64>) -> Vec<i8> {
         return self.modulator.process_frame(self.resampler.resample_frame(input));
         //return self.resampler.resample_frame(input);
     }

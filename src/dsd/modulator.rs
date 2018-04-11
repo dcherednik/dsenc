@@ -5,22 +5,22 @@
 //use self::rand::distributions::Sample;
 
 pub struct ModulatorCtx {
-    z: f64,
+    z: i8,
     z1: f64,
     z2: f64
 }
 
 pub trait Modulator {
     fn new() -> Self;
-    fn process_frame(&mut self, input: Vec<f64>) -> Vec<f64>;
+    fn process_frame(&mut self, input: Vec<f64>) -> Vec<i8>;
 }
 
-fn tobit(input: f64) -> f64 {
-    let res: f64;
+fn tobit(input: f64) -> i8 {
+    let res: i8;
     if input < 0f64 {
-        res = -1f64;
+        res = -1i8;
     } else {
-        res = 1f64;
+        res = 1i8;
     }
     return res;
 }
@@ -28,21 +28,21 @@ fn tobit(input: f64) -> f64 {
 impl Modulator for ModulatorCtx {
     fn new() -> ModulatorCtx {
         ModulatorCtx {
-            z: 0f64,
+            z: 0i8,
             z1: 0f64,
             z2: 0f64
         }
     }
-    fn process_frame(&mut self, input: Vec<f64>) -> Vec<f64> {
+    fn process_frame(&mut self, input: Vec<f64>) -> Vec<i8> {
         //let mut normal = Normal::new(0.0, 4096.0);
-        let mut out: Vec<f64> = vec![0f64; input.len()];
+        let mut out: Vec<i8> = vec![0i8; input.len()];
         //let mut rng = thread_rng();
         let mut z = self.z;
         let mut z1 = self.z1;
         let mut z2 = self.z2;
         for i in 0..input.len() {
-            z2 = z2 + input[i] - z;
-            z1 = z1 + z2 - z;
+            z2 = z2 + input[i] - z as f64;
+            z1 = z1 + z2 - z as f64;
             z = tobit(z1);
             out[i] = z;
         }
