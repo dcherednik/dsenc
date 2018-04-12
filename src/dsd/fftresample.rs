@@ -7,6 +7,7 @@ use self::rustfft::FFT;
 use self::rustfft::num_traits::Zero;
 
 use std::f64::consts::PI;
+use std::boxed::Box;
 
 pub struct ResampleCtx {
     frame_size: usize,
@@ -14,7 +15,9 @@ pub struct ResampleCtx {
     input_half_win: Vec<f64>,
     output_half_win: Vec<f64>,
     input_buffer: Vec<Complex<f64>>,
-    output_buffer: Vec<f64>
+    output_buffer: Vec<f64>,
+    fft: Box<FFT<f64>>,
+    ifft: Box<FFT<f64>>
 }
 
 pub trait Resampler {
@@ -45,7 +48,9 @@ impl Resampler for ResampleCtx {
                       input_half_win: create_half_win(sz, true),
                       output_half_win: create_half_win(sz * oversample, false),
                       input_buffer: vec![Zero::zero(); sz * 2],
-                      output_buffer: vec![Zero::zero(); sz * oversample]
+                      output_buffer: vec![Zero::zero(); sz * oversample],
+                      fft: Box::new(Radix4::new(sz * 2, false)),
+                      ifft: Box::new(Radix4::new((sz * oversample * 2), true))
         }
     }
 
@@ -63,9 +68,8 @@ impl Resampler for ResampleCtx {
         }
 
 
-        let fft = Radix4::new(self.frame_size * 2, false);
         let mut spectrum: Vec<Complex<f64>> = vec![Zero::zero(); self.frame_size * 2];
-        fft.process(&mut self.input_buffer, &mut spectrum);
+        self.fft.process(&mut self.input_buffer, &mut spectrum);
 
         // Apply window and copy to the first part of buffer (overlap)
         for i in 0..input.len() {
@@ -93,8 +97,7 @@ impl Resampler for ResampleCtx {
         }
 
         let mut result:   Vec<Complex<f64>> = vec![Zero::zero(); (self.frame_size * self.oversample * 2)];
-        let ifft = Radix4::new((self.frame_size * self.oversample * 2) as usize, true);
-        ifft.process(&mut new_spectrum, &mut result);
+        self.ifft.process(&mut new_spectrum, &mut result);
 
         let half = result.len()/2;
         for i in 0..half {
