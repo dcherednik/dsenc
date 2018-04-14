@@ -58,7 +58,8 @@ fn do_work(input_file: String, output_file: String) {
     let mut encoders: Vec<dsd::DsdencCtx> =
         (0..channels).map(|_| dsd::Dsdenc::new(FRAMESZ, spec.sample_rate as usize, oversample)).collect();
 
-    while possition < duration {
+    // encode one extra frame (dummy) per channel to compensate encoding delay
+    while possition < duration + FRAMESZ {
         let mut block_pos = 0u32 as usize;
         while block_pos < FRAMESZ && possition + block_pos < duration {
             let chs = buffers.len();
@@ -66,6 +67,16 @@ fn do_work(input_file: String, output_file: String) {
                 let buf = &mut buffers[ch];
                 let sample = ref_samples.next().map(|r| r.ok().unwrap());
                 buf[block_pos] = sample.unwrap() as f64 / scale;
+            }
+            block_pos = block_pos + 1;
+        }
+
+        // zero end of frame if real lengh less than frame fize
+        while block_pos < FRAMESZ {
+            let chs = buffers.len();
+            for ch in 0..chs {
+                let buf = &mut buffers[ch];
+                buf[block_pos] = 0f64;
             }
             block_pos = block_pos + 1;
         }
@@ -81,11 +92,18 @@ fn do_work(input_file: String, output_file: String) {
 
         }
 
+        // ignore result of encoding first frame - do add extra silence
+        if possition == 0 {
+            possition = possition + FRAMESZ;
+            continue;
+        }
+
         let chs = buffers.len();
         block_pos = 0usize;
+
         for ch in 0..chs {
             let buf = &mut out_buffers[ch];
-            while block_pos < FRAMESZ * oversample {
+            while block_pos < FRAMESZ * oversample && possition * oversample + block_pos < (duration + FRAMESZ) * oversample {
                 let sample = buf[block_pos];
                 if sample > 0i8 {
                     dsd_writer.write_bit(true);

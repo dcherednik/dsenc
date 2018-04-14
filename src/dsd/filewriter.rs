@@ -25,6 +25,12 @@ fn convert_to_bytes(shift: usize, input: usize, buf: &mut Vec<u8>) {
     }
 }
 
+impl Drop for WriterCtx {
+    fn drop(&mut self) {
+        self.file_writer.write_all(&self.write_buf).expect("Unable to write block");
+    }
+}
+
 impl Writer for WriterCtx {
     fn new(file_name: String, channels: usize, samples: usize, frame_sz: usize) -> WriterCtx {
         WriterCtx {
