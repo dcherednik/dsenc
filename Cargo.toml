@@ -8,4 +8,5 @@ license = "BSDv3"
 getopts = "0.2"
 hound = "2.0.0"
 rustfft = "2.0.0"
+rfft = { git = "https://github.com/dcherednik/rfft" }
 num = "0.1.42"
