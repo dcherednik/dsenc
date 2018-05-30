@@ -86,10 +86,6 @@ impl Resampler for ResampleCtx {
             new_spectrum.push(Complex::new(0f64, 0f64));
         }
 
-        //Do we realy need this
-        new_spectrum[self.frame_size * self.oversample - 1] = spectrum[end - 1];
-        new_spectrum[end - 1] = Complex::new(0f64, 0f64);
-
         let mut result: Vec<f64> = vec![Zero::zero(); (self.frame_size * self.oversample * 2)];
         self.ifft.process(&mut new_spectrum, &mut result);
 
