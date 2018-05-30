@@ -38,7 +38,7 @@ fn do_work(input_file: String, output_file: String) {
     let channels = spec.channels as usize;
 
 
-    let mut ref_samples = reader.samples::<i16>();
+    let mut ref_samples = reader.samples::<i32>();
 
     //DSD64
     let oversample = 64 as usize; // 64 as u32;
