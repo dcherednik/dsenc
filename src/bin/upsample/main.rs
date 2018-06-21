@@ -1,26 +1,17 @@
 extern crate getopts;
 use getopts::Options;
 use std::env;
-use std::io::Write;
-use std::io::stdout;
 extern crate hound;
 
 #[path = "../../dsd/fftresample.rs"]
 mod fftresample;
 use self::fftresample::Resampler;
-use self::fftresample::ResampleCtx;
+
+#[path = "../../helpers.rs"]
+mod helpers;
+use helpers::show_progress;
 
 const FRAMESZ: usize = 512;
-
-fn show_progress(pos: usize, duration: usize, cont: bool) {
-    let percent = pos * 100usize / duration;
-    if cont {
-        print!("{} % \r", percent);
-    } else {
-        print!("{} % done\n", percent);
-    }
-    stdout().flush().expect("Unable to flush stdout");
-}
 
 fn do_work(input_file: String, output_file: String) {
     let mut reader = hound::WavReader::open(input_file).unwrap();
@@ -106,7 +97,6 @@ fn do_work(input_file: String, output_file: String) {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let program = args[0].clone();
 
     let mut opts = Options::new();
     opts.optopt("i", "", "set input file name", "NAME");

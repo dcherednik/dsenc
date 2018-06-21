@@ -1,12 +1,10 @@
 extern crate getopts;
 use getopts::Options;
 use std::env;
-use std::io::Write;
-use std::io::stdout;
 extern crate hound;
 
-
-
+mod helpers;
+use helpers::show_progress;
 mod dsd;
 use dsd::Dsdenc;
 use dsd::filewriter::Writer;
@@ -21,16 +19,6 @@ fn print_usage(program: &str, opts: Options) {
     print!("{}", opts.usage(&brief));
 }
 
-fn show_progress(pos: usize, duration: usize, cont: bool) {
-    let percent = pos * 100usize / duration;
-    if cont {
-        print!("{} % \r", percent);
-    } else {
-        print!("{} % done\n", percent);
-    }
-    stdout().flush().expect("Unable to flush stdout");
-}
-
 fn do_work(input_file: String, output_file: String) {
     let mut reader = hound::WavReader::open(input_file).unwrap();
     let spec = reader.spec();
@@ -43,8 +31,6 @@ fn do_work(input_file: String, output_file: String) {
     //DSD64
     let oversample = 64 as usize; // 64 as u32;
     let scale = (1 << (spec.bits_per_sample - 1)) as f64;
-    let mut new_spec = spec.clone();
-    new_spec.sample_rate = spec.sample_rate * oversample as u32;
 
     let mut dsd_writer: dsd::filewriter::WriterCtx = dsd::filewriter::Writer::new(output_file, channels, oversample * duration, oversample * FRAMESZ / 8);
     dsd_writer.write_header();
